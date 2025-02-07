@@ -322,7 +322,7 @@ class _LandingPageState extends State<LandingPage> {
                           MaterialPageRoute(builder: (context) => const UploadVideoScreen()),
                         );
                       },
-                      child: const Text('Upload Videos'),
+                      child: const Text('Post Video'),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
@@ -334,9 +334,12 @@ class _LandingPageState extends State<LandingPage> {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        // TODO: Navigate to bio page screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ProfilePage()),
+                        );
                       },
-                      child: const Text('Bio'),
+                      child: const Text('Profile'),
                     ),
                   ],
                 ),
@@ -455,6 +458,66 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Text(_uploadStatus!),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
+
+  @override
+  _ProfilePageState createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  String username = "";
+
+  @override
+  void initState() {
+    super.initState();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    setState(() {
+      username = (currentUser?.displayName?.isNotEmpty ?? false)
+          ? currentUser!.displayName!
+          : "User";
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profile'),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 20),
+            Text(
+              username,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            const Expanded(
+              child: Center(
+                child: Text(
+                  'Your videos will appear here',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
