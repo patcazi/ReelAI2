@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TerkTok',
+      title: 'GlowTok',
       home: const HomePage(),
     );
   }
@@ -40,7 +40,7 @@ class HomePage extends StatelessWidget {
               padding: EdgeInsets.only(top: 50.0),
               child: Center(
                 child: Text(
-                  'TwerkTok',
+                  'GlowTok',
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -272,7 +272,7 @@ class _LandingPageState extends State<LandingPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'TwerkTok',
+          'GlowTok',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
