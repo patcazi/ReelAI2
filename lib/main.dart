@@ -296,7 +296,19 @@ class _LandingPageState extends State<LandingPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 60),
+              const SizedBox(height: 30),
+              SizedBox(
+                height: 300,
+                child: Center(
+                  child: Image.asset(
+                    'assets/images/CurveyWoman.png',
+                    fit: BoxFit.contain,
+                    width: 200,
+                    height: 250,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -319,7 +331,7 @@ class _LandingPageState extends State<LandingPage> {
                       onPressed: () {
                         // TODO: Navigate to bio page screen
                       },
-                      child: const Text('Bio Page'),
+                      child: const Text('Bio'),
                     ),
                   ],
                 ),
