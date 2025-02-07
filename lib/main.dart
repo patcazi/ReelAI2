@@ -108,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+            MaterialPageRoute(builder: (context) => const LandingPage()),
           );
         }
       } catch (e) {
@@ -179,7 +179,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+            MaterialPageRoute(builder: (context) => const LandingPage()),
           );
         }
       } catch (e) {
@@ -239,6 +239,94 @@ class WelcomeScreen extends StatelessWidget {
       ),
       body: const Center(
         child: Text('Welcome', style: TextStyle(fontSize: 24)),
+      ),
+    );
+  }
+}
+
+class LandingPage extends StatefulWidget {
+  const LandingPage({super.key});
+
+  @override
+  _LandingPageState createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  String username = "";
+
+  @override
+  void initState() {
+    super.initState();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    setState(() {
+      username = (currentUser?.displayName?.isNotEmpty ?? false)
+          ? currentUser!.displayName!
+          : "Superstar";
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'TwerkTok',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 40),
+              const Text(
+                'Ready to Shine,',
+                style: TextStyle(
+                  fontSize: 24,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                '$username?',
+                style: const TextStyle(
+                  fontSize: 24,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 60),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        // TODO: Navigate to upload videos screen
+                      },
+                      child: const Text('Upload Videos'),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        // TODO: Navigate to direct messages screen
+                      },
+                      child: const Text('Direct Messages'),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        // TODO: Navigate to bio page screen
+                      },
+                      child: const Text('Bio Page'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
