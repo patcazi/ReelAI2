@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'firebase_options.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -301,10 +303,10 @@ class _LandingPageState extends State<LandingPage> {
                 height: 300,
                 child: Center(
                   child: Image.asset(
-                    'assets/images/CurveyWoman.png',
+                    'assets/images/KatieProfilePic.png',
                     fit: BoxFit.contain,
-                    width: 200,
-                    height: 250,
+                    width: 240,
+                    height: 300,
                   ),
                 ),
               ),
@@ -315,7 +317,10 @@ class _LandingPageState extends State<LandingPage> {
                   children: [
                     ElevatedButton(
                       onPressed: () {
-                        // TODO: Navigate to upload videos screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const UploadVideoScreen()),
+                        );
                       },
                       child: const Text('Upload Videos'),
                     ),
@@ -338,6 +343,119 @@ class _LandingPageState extends State<LandingPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class UploadVideoScreen extends StatefulWidget {
+  const UploadVideoScreen({super.key});
+
+  @override
+  _UploadVideoScreenState createState() => _UploadVideoScreenState();
+}
+
+class _UploadVideoScreenState extends State<UploadVideoScreen> {
+  bool _isUploading = false;
+  String? _uploadStatus;
+
+  Future<void> _pickAndUploadVideo() async {
+    try {
+      final picker = ImagePicker();
+      final video = await picker.pickVideo(source: ImageSource.gallery);
+      
+      if (video == null) return;
+
+      setState(() {
+        _isUploading = true;
+        _uploadStatus = 'Uploading video...';
+      });
+
+      // Create a unique filename using timestamp
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final videoName = 'videos/$userId/$timestamp.mp4';
+
+      // Upload to Firebase Storage
+      final videoFile = File(video.path);
+      final storageRef = FirebaseStorage.instance.ref().child(videoName);
+      
+      // Start upload
+      final uploadTask = storageRef.putFile(
+        videoFile,
+        SettableMetadata(contentType: 'video/mp4'),
+      );
+
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setState(() {
+          _uploadStatus = 'Uploading: ${progress.toStringAsFixed(1)}%';
+        });
+      });
+
+      // Wait for upload to complete
+      await uploadTask;
+      
+      // Get download URL
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      setState(() {
+        _isUploading = false;
+        _uploadStatus = 'Upload complete!';
+      });
+
+      // TODO: Save video metadata to Firestore
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Video uploaded successfully!')),
+        );
+      }
+
+    } catch (e) {
+      setState(() {
+        _isUploading = false;
+        _uploadStatus = 'Upload failed: $e';
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error uploading video: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Upload Video'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_isUploading)
+              Column(
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 20),
+                  Text(_uploadStatus ?? 'Uploading...'),
+                ],
+              )
+            else
+              ElevatedButton(
+                onPressed: _pickAndUploadVideo,
+                child: const Text('Select Video from Gallery'),
+              ),
+            if (_uploadStatus != null && !_isUploading)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(_uploadStatus!),
+              ),
+          ],
         ),
       ),
     );
