@@ -613,7 +613,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     super.initState();
     _controller = VideoPlayerController.network(widget.videoUrl)
       ..initialize().then((_) {
-        setState(() {}); // Refresh the UI when the video is ready
+        setState(() {});
+        _controller.play(); // Start video playback immediately
       });
   }
 
