@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -8,6 +9,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  final storage = FirebaseStorage.instance;
   runApp(const MyApp());
 }
 
@@ -36,7 +38,7 @@ class HomePage extends StatelessWidget {
               padding: EdgeInsets.only(top: 50.0),
               child: Center(
                 child: Text(
-                  'TerkTok',
+                  'TwerkTok',
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 ),
               ),
