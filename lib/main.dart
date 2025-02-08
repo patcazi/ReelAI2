@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import 'dart:io';
 
 Future<void> main() async {
@@ -380,6 +381,22 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
       // Create a unique filename using timestamp
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final userId = FirebaseAuth.instance.currentUser?.uid;
+
+      final thumbnailData = await VideoThumbnail.thumbnailData(
+        video: video.path,        // The local path from image_picker
+        imageFormat: ImageFormat.PNG,
+        maxWidth: 512,            // or any desired thumbnail size
+        quality: 90,              // 0-100 (higher = better quality)
+      );
+
+      if (thumbnailData == null) {
+        // Handle the case if thumbnail generation failed
+        return;
+      }
+
+      final thumbnailName = 'thumbnails/$userId/$timestamp.png';
+      final thumbnailRef = FirebaseStorage.instance.ref().child(thumbnailName);
+
       final videoName = 'videos/$userId/$timestamp.mp4';
 
       // Upload to Firebase Storage
@@ -406,10 +423,17 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
       // Get download URL
       final downloadUrl = await storageRef.getDownloadURL();
 
+      await thumbnailRef.putData(
+        thumbnailData,
+        SettableMetadata(contentType: 'image/png'),
+      );
+      final thumbnailUrl = await thumbnailRef.getDownloadURL();
+
       // Save video metadata to Firestore
       await FirebaseFirestore.instance.collection('videos').add({
         'userId': userId,
         'videoUrl': downloadUrl,
+        'thumbnailUrl': thumbnailUrl,
         'timestamp': timestamp,
         'uploadDate': FieldValue.serverTimestamp(),
       });
@@ -570,17 +594,13 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           );
                         },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.play_circle_outline,
-                              size: 48,
-                              color: Colors.grey[600],
-                            ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            video['thumbnailUrl'],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
                           ),
                         ),
                       );
