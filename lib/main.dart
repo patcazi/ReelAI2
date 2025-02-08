@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'dart:io';
 
 Future<void> main() async {
@@ -476,11 +477,34 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-              child: TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Video Title',
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Video Title',
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (context) {
+                          return EmojiPicker(
+                            onEmojiSelected: (category, emoji) {
+                              setState(() {
+                                _titleController.text += emoji.emoji;
+                              });
+                            },
+                          );
+                        },
+                      );
+                    },
+                    icon: const Icon(Icons.emoji_emotions_outlined),
+                  ),
+                ],
               ),
             ),
             if (_isUploading)
