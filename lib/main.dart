@@ -560,6 +560,17 @@ class _ProfilePageState extends State<ProfilePage> {
       appBar: AppBar(
         title: const Text('Profile'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -574,7 +585,29 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 30),
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(userId)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data?.data() != null) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  final aboutMe = data['aboutMe'] as String?;
+                  if (aboutMe != null && aboutMe.isNotEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        aboutMe,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    );
+                  }
+                }
+                return const SizedBox(height: 30);
+              },
+            ),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -710,6 +743,60 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 child: VideoPlayer(_controller),
               )
             : const CircularProgressIndicator(),
+      ),
+    );
+  }
+}
+
+class EditProfileScreen extends StatefulWidget {
+  const EditProfileScreen({super.key});
+
+  @override
+  _EditProfileScreenState createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  final TextEditingController _aboutMeController = TextEditingController();
+
+  Future<void> _saveProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'aboutMe': _aboutMeController.text.trim(),
+      }, SetOptions(merge: true));
+      
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Edit Profile'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _aboutMeController,
+              decoration: const InputDecoration(
+                labelText: 'About Me',
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _saveProfile,
+              child: const Text('Save'),
+            ),
+          ],
+        ),
       ),
     );
   }
