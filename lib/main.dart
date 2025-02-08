@@ -660,12 +660,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         children: [
                           GestureDetector(
                             onTap: () {
+                              final docs = snapshot.data!.docs;
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => VideoPlayerScreen(
-                                    videoUrl: data['videoUrl'],
-                                    title: title,
+                                  builder: (context) => ScrollingVideosScreen(
+                                    videos: docs,
+                                    initialIndex: index,
                                   ),
                                 ),
                               );
@@ -928,6 +929,58 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ScrollingVideosScreen extends StatefulWidget {
+  final List<QueryDocumentSnapshot> videos;
+  final int initialIndex;
+
+  const ScrollingVideosScreen({
+    super.key,
+    required this.videos,
+    required this.initialIndex,
+  });
+
+  @override
+  _ScrollingVideosScreenState createState() => _ScrollingVideosScreenState();
+}
+
+class _ScrollingVideosScreenState extends State<ScrollingVideosScreen> {
+  late final List<QueryDocumentSnapshot> videos;
+  late final int initialIndex;
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    videos = widget.videos;
+    initialIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: PageView.builder(
+        controller: _pageController,
+        scrollDirection: Axis.vertical,
+        itemCount: videos.length,
+        itemBuilder: (context, index) {
+          final videoData = videos[index].data() as Map<String, dynamic>;
+          return VideoPlayerScreen(
+            videoUrl: videoData['videoUrl'],
+            title: videoData['title'] ?? 'Untitled',
+          );
+        },
       ),
     );
   }
