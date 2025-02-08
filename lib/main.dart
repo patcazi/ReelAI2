@@ -365,6 +365,7 @@ class UploadVideoScreen extends StatefulWidget {
 class _UploadVideoScreenState extends State<UploadVideoScreen> {
   bool _isUploading = false;
   String? _uploadStatus;
+  final TextEditingController _titleController = TextEditingController();
 
   Future<void> _pickAndUploadVideo() async {
     try {
@@ -434,6 +435,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
         'userId': userId,
         'videoUrl': downloadUrl,
         'thumbnailUrl': thumbnailUrl,
+        'title': _titleController.text.trim(),
         'timestamp': timestamp,
         'uploadDate': FieldValue.serverTimestamp(),
       });
@@ -472,6 +474,15 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Video Title',
+                ),
+              ),
+            ),
             if (_isUploading)
               Column(
                 children: [
@@ -583,6 +594,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     itemCount: snapshot.data!.docs.length,
                     itemBuilder: (context, index) {
                       final video = snapshot.data!.docs[index];
+                      final data = video.data() as Map<String, dynamic>;
+                      final title = data['title'] ?? 'Untitled';
                       return GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -594,14 +607,29 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           );
                         },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            video['thumbnailUrl'],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                          ),
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  video['thumbnailUrl'],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },
