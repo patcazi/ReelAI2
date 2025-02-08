@@ -573,43 +573,43 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 20),
-            Text(
-              username,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 20),
+              Text(
+                username,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            StreamBuilder<DocumentSnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(userId)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data?.data() != null) {
-                  final data = snapshot.data!.data() as Map<String, dynamic>;
-                  final aboutMe = data['aboutMe'] as String?;
-                  if (aboutMe != null && aboutMe.isNotEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        aboutMe,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    );
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(userId)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data?.data() != null) {
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+                    final aboutMe = data['aboutMe'] as String?;
+                    if (aboutMe != null && aboutMe.isNotEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          aboutMe,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      );
+                    }
                   }
-                }
-                return const SizedBox(height: 30);
-              },
-            ),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
+                  return const SizedBox(height: 30);
+                },
+              ),
+              StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('videos')
                     .where('userId', isEqualTo: userId)
@@ -643,6 +643,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   return GridView.builder(
                     padding: const EdgeInsets.all(8),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       crossAxisSpacing: 8,
@@ -760,8 +762,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   );
                 },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
