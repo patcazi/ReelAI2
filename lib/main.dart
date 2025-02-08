@@ -757,15 +757,27 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _aboutMeController = TextEditingController();
+  final TextEditingController _profileNameController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.displayName != null) {
+      _profileNameController.text = user!.displayName!;
+    }
+  }
 
   Future<void> _saveProfile() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      await user.updateDisplayName(_profileNameController.text.trim());
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .set({
         'aboutMe': _aboutMeController.text.trim(),
+        'displayName': _profileNameController.text.trim(),
       }, SetOptions(merge: true));
       
       if (mounted) {
@@ -785,10 +797,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Column(
           children: [
             TextField(
-              controller: _aboutMeController,
+              controller: _profileNameController,
               decoration: const InputDecoration(
-                labelText: 'About Me',
+                labelText: 'Profile Name',
               ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _aboutMeController,
+                    decoration: const InputDecoration(
+                      labelText: 'About Me',
+                    ),
+                    maxLines: 6,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) {
+                        return EmojiPicker(
+                          onEmojiSelected: (category, emoji) {
+                            setState(() {
+                              _aboutMeController.text += emoji.emoji;
+                            });
+                          },
+                        );
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.emoji_emotions_outlined),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             ElevatedButton(
