@@ -771,16 +771,91 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
+class ScrollingVideosScreen extends StatefulWidget {
+  final List<QueryDocumentSnapshot> videos;
+  final int initialIndex;
+
+  const ScrollingVideosScreen({
+    super.key,
+    required this.videos,
+    required this.initialIndex,
+  });
+
+  @override
+  _ScrollingVideosScreenState createState() => _ScrollingVideosScreenState();
+}
+
+class _ScrollingVideosScreenState extends State<ScrollingVideosScreen> {
+  late final List<QueryDocumentSnapshot> videos;
+  late final int initialIndex;
+  late final PageController _pageController;
+  final Map<int, VideoPlayerController> _videoControllers = {};
+
+  void _onPageChanged(int index) {
+    // Pause all videos except the current one
+    _videoControllers.forEach((pageIndex, controller) {
+      if (pageIndex != index && controller.value.isPlaying) {
+        controller.pause();
+      }
+    });
+  }
+
+  void _registerVideoController(int index, VideoPlayerController controller) {
+    _videoControllers[index] = controller;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    videos = widget.videos;
+    initialIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    // Dispose all video controllers
+    for (final controller in _videoControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: PageView.builder(
+        controller: _pageController,
+        scrollDirection: Axis.vertical,
+        itemCount: videos.length,
+        onPageChanged: _onPageChanged,
+        itemBuilder: (context, index) {
+          final videoData = videos[index].data() as Map<String, dynamic>;
+          return VideoPlayerScreen(
+            videoUrl: videoData['videoUrl'],
+            title: videoData['title'] ?? 'Untitled',
+            videoId: videos[index].id,
+            onControllerInitialized: (controller) => _registerVideoController(index, controller),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
   final String title;
   final String? videoId;
+  final Function(VideoPlayerController)? onControllerInitialized;
 
   const VideoPlayerScreen({
     super.key,
     required this.videoUrl,
     required this.title,
     this.videoId,
+    this.onControllerInitialized,
   });
 
   @override
@@ -886,15 +961,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     super.initState();
     _controller = VideoPlayerController.network(widget.videoUrl)
       ..initialize().then((_) {
-        _controller.setLooping(true);
         setState(() {});
+        _controller.setLooping(true);
         _controller.play();
+        widget.onControllerInitialized?.call(_controller);
       });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
     _commentController.dispose();
     super.dispose();
   }
@@ -1242,59 +1317,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class ScrollingVideosScreen extends StatefulWidget {
-  final List<QueryDocumentSnapshot> videos;
-  final int initialIndex;
-
-  const ScrollingVideosScreen({
-    super.key,
-    required this.videos,
-    required this.initialIndex,
-  });
-
-  @override
-  _ScrollingVideosScreenState createState() => _ScrollingVideosScreenState();
-}
-
-class _ScrollingVideosScreenState extends State<ScrollingVideosScreen> {
-  late final List<QueryDocumentSnapshot> videos;
-  late final int initialIndex;
-  late final PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    videos = widget.videos;
-    initialIndex = widget.initialIndex;
-    _pageController = PageController(initialPage: initialIndex);
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: PageView.builder(
-        controller: _pageController,
-        scrollDirection: Axis.vertical,
-        itemCount: videos.length,
-        itemBuilder: (context, index) {
-          final videoData = videos[index].data() as Map<String, dynamic>;
-          return VideoPlayerScreen(
-            videoUrl: videoData['videoUrl'],
-            title: videoData['title'] ?? 'Untitled',
-            videoId: videos[index].id,
-          );
-        },
       ),
     );
   }
