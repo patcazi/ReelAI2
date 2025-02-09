@@ -774,11 +774,13 @@ class _ProfilePageState extends State<ProfilePage> {
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
   final String title;
+  final String? videoId;
 
   const VideoPlayerScreen({
     super.key,
     required this.videoUrl,
     required this.title,
+    this.videoId,
   });
 
   @override
@@ -787,6 +789,28 @@ class VideoPlayerScreen extends StatefulWidget {
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   late VideoPlayerController _controller;
+
+  Future<void> _handleLike() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final videoId = widget.videoId;
+    
+    if (currentUser != null && videoId != null) {
+      final likesRef = FirebaseFirestore.instance
+          .collection('videos')
+          .doc(videoId)
+          .collection('likes')
+          .doc(currentUser.uid);
+
+      final doc = await likesRef.get();
+      if (doc.exists) {
+        // Unlike: delete the doc
+        await likesRef.delete();
+      } else {
+        // Like: create the doc
+        await likesRef.set({'timestamp': FieldValue.serverTimestamp()});
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -822,13 +846,55 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   )
                 : const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            Text(
-              widget.title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        widget.title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.videoId != null) StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('videos')
+                        .doc(widget.videoId)
+                        .collection('likes')
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      final likesSnapshot = snapshot.data;
+                      final likesCount = likesSnapshot?.size ?? 0;
+                      final currentUser = FirebaseAuth.instance.currentUser;
+                      final userHasLiked = currentUser != null && 
+                          (likesSnapshot?.docs.any((doc) => doc.id == currentUser.uid) ?? false);
+
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              userHasLiked ? Icons.favorite : Icons.favorite_border,
+                              color: userHasLiked ? Colors.red : null,
+                            ),
+                            onPressed: _handleLike,
+                          ),
+                          Text(
+                            likesCount.toString(),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -979,6 +1045,7 @@ class _ScrollingVideosScreenState extends State<ScrollingVideosScreen> {
           return VideoPlayerScreen(
             videoUrl: videoData['videoUrl'],
             title: videoData['title'] ?? 'Untitled',
+            videoId: videos[index].id,
           );
         },
       ),
