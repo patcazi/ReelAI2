@@ -849,6 +849,38 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     }
   }
 
+  Future<void> _handleDeleteComment(String commentId) async {
+    final videoId = widget.videoId;
+    if (videoId != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Comment'),
+          content: const Text('Are you sure you want to delete this comment?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true && mounted) {
+        await FirebaseFirestore.instance
+            .collection('videos')
+            .doc(videoId)
+            .collection('comments')
+            .doc(commentId)
+            .delete();
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -993,6 +1025,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                     final displayName = userSnapshot.data?.get('displayName') as String? ?? 'User';
                                     final timestamp = comment['timestamp'] as Timestamp?;
                                     final timeAgo = timestamp != null ? _getRelativeTime(timestamp) : '';
+                                    final currentUser = FirebaseAuth.instance.currentUser;
+                                    final isCommentOwner = currentUser?.uid == comment['userId'];
                                     
                                     return Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1007,12 +1041,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                                 fontSize: 14,
                                               ),
                                             ),
-                                            Text(
-                                              timeAgo,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey,
-                                              ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  timeAgo,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                                if (isCommentOwner) IconButton(
+                                                  icon: const Icon(
+                                                    Icons.delete_outline,
+                                                    size: 18,
+                                                    color: Colors.grey,
+                                                  ),
+                                                  onPressed: () => _handleDeleteComment(comment.id),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints: const BoxConstraints(),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
@@ -1069,15 +1117,19 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             setState(() {
                               final text = _commentController.text;
                               final selection = _commentController.selection;
-                              final newText = text.replaceRange(
-                                selection.start,
-                                selection.end,
-                                emoji.emoji,
-                              );
-                              _commentController.text = newText;
-                              _commentController.selection = TextSelection.collapsed(
-                                offset: selection.start + emoji.emoji.length,
-                              );
+                              
+                              if (selection.start < 0 || selection.end < 0) {
+                                _commentController.text = text + emoji.emoji;
+                                _commentController.selection = TextSelection.collapsed(
+                                  offset: _commentController.text.length,
+                                );
+                              } else {
+                                final newText = text.replaceRange(selection.start, selection.end, emoji.emoji);
+                                _commentController.text = newText;
+                                _commentController.selection = TextSelection.collapsed(
+                                  offset: selection.start + emoji.emoji.length,
+                                );
+                              }
                             });
                           },
                         );
