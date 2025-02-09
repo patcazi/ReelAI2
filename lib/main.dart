@@ -789,6 +789,23 @@ class VideoPlayerScreen extends StatefulWidget {
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   late VideoPlayerController _controller;
+  final TextEditingController _commentController = TextEditingController();
+
+  String _getRelativeTime(Timestamp timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp.toDate());
+
+    if (difference.inMinutes < 60) {
+      final minutes = difference.inMinutes;
+      return '$minutes ${minutes == 1 ? 'minute' : 'minutes'} ago';
+    } else if (difference.inHours < 24) {
+      final hours = difference.inHours;
+      return '$hours ${hours == 1 ? 'hour' : 'hours'} ago';
+    } else {
+      final days = difference.inDays;
+      return '$days ${days == 1 ? 'day' : 'days'} ago';
+    }
+  }
 
   Future<void> _handleLike() async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -812,6 +829,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     }
   }
 
+  Future<void> _handleComment() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final videoId = widget.videoId;
+    final commentText = _commentController.text.trim();
+    
+    if (currentUser != null && videoId != null && commentText.isNotEmpty) {
+      await FirebaseFirestore.instance
+          .collection('videos')
+          .doc(videoId)
+          .collection('comments')
+          .add({
+        'userId': currentUser.uid,
+        'text': commentText,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      
+      _commentController.clear();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -826,6 +863,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _commentController.dispose();
     super.dispose();
   }
 
@@ -835,69 +873,226 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       appBar: AppBar(
         title: const Text('Glow Show'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            _controller.value.isInitialized
-                ? AspectRatio(
-                    aspectRatio: _controller.value.aspectRatio,
-                    child: VideoPlayer(_controller),
-                  )
+      body: Column(
+        children: [
+          // Video and title section
+          AspectRatio(
+            aspectRatio: _controller.value.aspectRatio,
+            child: _controller.value.isInitialized
+                ? VideoPlayer(_controller)
                 : const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        widget.title,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      widget.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  if (widget.videoId != null) StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('videos')
-                        .doc(widget.videoId)
-                        .collection('likes')
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      final likesSnapshot = snapshot.data;
-                      final likesCount = likesSnapshot?.size ?? 0;
-                      final currentUser = FirebaseAuth.instance.currentUser;
-                      final userHasLiked = currentUser != null && 
-                          (likesSnapshot?.docs.any((doc) => doc.id == currentUser.uid) ?? false);
+                ),
+                if (widget.videoId != null) StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('videos')
+                      .doc(widget.videoId)
+                      .collection('likes')
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    final likesSnapshot = snapshot.data;
+                    final likesCount = likesSnapshot?.size ?? 0;
+                    final currentUser = FirebaseAuth.instance.currentUser;
+                    final userHasLiked = currentUser != null && 
+                        (likesSnapshot?.docs.any((doc) => doc.id == currentUser.uid) ?? false);
 
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              userHasLiked ? Icons.favorite : Icons.favorite_border,
-                              color: userHasLiked ? Colors.red : null,
-                            ),
-                            onPressed: _handleLike,
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            userHasLiked ? Icons.favorite : Icons.favorite_border,
+                            color: userHasLiked ? Colors.red : null,
                           ),
+                          onPressed: _handleLike,
+                        ),
+                        Text(
+                          likesCount.toString(),
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          
+          // Comments section
+          if (widget.videoId != null) Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('videos')
+                  .doc(widget.videoId)
+                  .collection('comments')
+                  .orderBy('timestamp', descending: false)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Error loading comments'));
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final comments = snapshot.data?.docs ?? [];
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Row(
+                        children: const [
                           Text(
-                            likesCount.toString(),
-                            style: const TextStyle(fontSize: 16),
+                            'Comments',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
-                      );
-                    },
-                  ),
-                ],
-              ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        itemCount: comments.length,
+                        itemBuilder: (context, index) {
+                          final comment = comments[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Card(
+                              elevation: 1,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: StreamBuilder<DocumentSnapshot>(
+                                  stream: FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(comment['userId'])
+                                      .snapshots(),
+                                  builder: (context, userSnapshot) {
+                                    final displayName = userSnapshot.data?.get('displayName') as String? ?? 'User';
+                                    final timestamp = comment['timestamp'] as Timestamp?;
+                                    final timeAgo = timestamp != null ? _getRelativeTime(timestamp) : '';
+                                    
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              displayName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            Text(
+                                              timeAgo,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          comment['text'] ?? '',
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ],
-        ),
+          ),
+          
+          // Comment input section
+          if (widget.videoId != null) Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            margin: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _commentController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a comment...',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.emoji_emotions_outlined),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) {
+                        return EmojiPicker(
+                          onEmojiSelected: (category, emoji) {
+                            setState(() {
+                              final text = _commentController.text;
+                              final selection = _commentController.selection;
+                              final newText = text.replaceRange(
+                                selection.start,
+                                selection.end,
+                                emoji.emoji,
+                              );
+                              _commentController.text = newText;
+                              _commentController.selection = TextSelection.collapsed(
+                                offset: selection.start + emoji.emoji.length,
+                              );
+                            });
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: _handleComment,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
