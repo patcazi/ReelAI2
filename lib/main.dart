@@ -7,8 +7,8 @@ import 'firebase_options.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
-import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'dart:io';
+import 'generate_title_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -432,7 +432,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
       final thumbnailUrl = await thumbnailRef.getDownloadURL();
 
       // Save video metadata to Firestore
-      await FirebaseFirestore.instance.collection('videos').add({
+      final docRef = await FirebaseFirestore.instance.collection('videos').add({
         'userId': userId,
         'videoUrl': downloadUrl,
         'thumbnailUrl': thumbnailUrl,
@@ -449,6 +449,17 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Video uploaded successfully!')),
+        );
+
+        // Navigate to GenerateTitleScreen with docId
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GenerateTitleScreen(
+              videoUrl: downloadUrl,
+              videoId: docRef.id,
+            ),
+          ),
         );
       }
 
@@ -479,31 +490,31 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               child: Row(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Video Title',
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        builder: (context) {
-                          return EmojiPicker(
-                            onEmojiSelected: (category, emoji) {
-                              setState(() {
-                                _titleController.text += emoji.emoji;
-                              });
-                            },
-                          );
-                        },
-                      );
-                    },
-                    icon: const Icon(Icons.emoji_emotions_outlined),
-                  ),
+                  // Expanded(
+                  //   child: TextField(
+                  //     controller: _titleController,
+                  //     decoration: const InputDecoration(
+                  //       labelText: 'Video Title',
+                  //     ),
+                  //   ),
+                  // ),
+                  // IconButton(
+                  //   onPressed: () {
+                  //     showModalBottomSheet(
+                  //       context: context,
+                  //       builder: (context) {
+                  //         return EmojiPicker(
+                  //           onEmojiSelected: (category, emoji) {
+                  //             setState(() {
+                  //               _titleController.text += emoji.emoji;
+                  //             });
+                  //           },
+                  //         );
+                  //       },
+                  //     );
+                  //   },
+                  //   icon: const Icon(Icons.emoji_emotions_outlined),
+                  // ),
                 ],
               ),
             ),
@@ -814,6 +825,7 @@ class _ScrollingVideosScreenState extends State<ScrollingVideosScreen> {
 
   @override
   void dispose() {
+    print('DEBUG: Disposing ScrollingVideosScreen and all video controllers');
     _pageController.dispose();
     // Dispose all video controllers
     for (final controller in _videoControllers.values) {
@@ -825,20 +837,26 @@ class _ScrollingVideosScreenState extends State<ScrollingVideosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView.builder(
-        controller: _pageController,
-        scrollDirection: Axis.vertical,
-        itemCount: videos.length,
-        onPageChanged: _onPageChanged,
-        itemBuilder: (context, index) {
-          final videoData = videos[index].data() as Map<String, dynamic>;
-          return VideoPlayerScreen(
-            videoUrl: videoData['videoUrl'],
-            title: videoData['title'] ?? 'Untitled',
-            videoId: videos[index].id,
-            onControllerInitialized: (controller) => _registerVideoController(index, controller),
-          );
+      body: WillPopScope(
+        onWillPop: () async {
+          Navigator.of(context).pop();
+          return false;
         },
+        child: PageView.builder(
+          controller: _pageController,
+          scrollDirection: Axis.vertical,
+          itemCount: videos.length,
+          onPageChanged: _onPageChanged,
+          itemBuilder: (context, index) {
+            final videoData = videos[index].data() as Map<String, dynamic>;
+            return VideoPlayerScreen(
+              videoUrl: videoData['videoUrl'],
+              title: videoData['title'] ?? 'Untitled',
+              videoId: videos[index].id,
+              onControllerInitialized: (controller) => _registerVideoController(index, controller),
+            );
+          },
+        ),
       ),
     );
   }
@@ -1182,37 +1200,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.emoji_emotions_outlined),
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (context) {
-                        return EmojiPicker(
-                          onEmojiSelected: (category, emoji) {
-                            setState(() {
-                              final text = _commentController.text;
-                              final selection = _commentController.selection;
-                              
-                              if (selection.start < 0 || selection.end < 0) {
-                                _commentController.text = text + emoji.emoji;
-                                _commentController.selection = TextSelection.collapsed(
-                                  offset: _commentController.text.length,
-                                );
-                              } else {
-                                final newText = text.replaceRange(selection.start, selection.end, emoji.emoji);
-                                _commentController.text = newText;
-                                _commentController.selection = TextSelection.collapsed(
-                                  offset: selection.start + emoji.emoji.length,
-                                );
-                              }
-                            });
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-                IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: _handleComment,
                 ),
@@ -1291,23 +1278,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     maxLines: 6,
                   ),
                 ),
-                IconButton(
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (context) {
-                        return EmojiPicker(
-                          onEmojiSelected: (category, emoji) {
-                            setState(() {
-                              _aboutMeController.text += emoji.emoji;
-                            });
-                          },
-                        );
-                      },
-                    );
-                  },
-                  icon: const Icon(Icons.emoji_emotions_outlined),
-                ),
+                // IconButton(
+                //   onPressed: () {
+                //     showModalBottomSheet(
+                //       context: context,
+                //       builder: (context) {
+                //         return EmojiPicker(
+                //           onEmojiSelected: (category, emoji) {
+                //             setState(() {
+                //               _aboutMeController.text += emoji.emoji;
+                //             });
+                //           },
+                //         );
+                //       },
+                //     );
+                //   },
+                //   icon: const Icon(Icons.emoji_emotions_outlined),
+                // ),
               ],
             ),
             const SizedBox(height: 20),
