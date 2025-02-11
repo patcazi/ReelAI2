@@ -91,14 +91,17 @@ exports.generateTitleHashtags = onRequest(
         const prompt = `
 Return exactly two lines:
 Line 1: A short, catchy video title (no extra words, no quotation marks).
-Line 2: 3-5 hashtags separated by commas (do not add the word "Hashtag" or any labels).
+Line 2: 3-5 hashtags separated by commas (do not add the word "Hashtag" or
+any labels).
 `.trim();
         const textResponse = await client.generate.text(task.videoId, prompt);
 
         const responseStr = JSON.stringify(textResponse);
-        logger.info(`Title/Hashtags Response: ${responseStr}`);
+        logger.info(
+            `Title/Hashtags Response: ${responseStr}`,
+        );
 
-        let rawOutput = textResponse.data ?? "";
+        let rawOutput = textResponse.data || "";
         rawOutput = rawOutput
             .replace(/title:\s*/gi, "")
             .replace(/hashtags:\s*/gi, "");

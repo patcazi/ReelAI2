@@ -49,7 +49,7 @@ class _GenerateTitleScreenState extends State<GenerateTitleScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          _titleController.text = data["result"]?["data"] ?? "No data returned";
+          _titleController.text = data["result"] ?? "No data returned";
           _status = data["message"];
         });
       } else {
