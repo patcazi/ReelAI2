@@ -4,8 +4,13 @@ import 'add_title_screen.dart';
 
 class AiVideoPlaybackScreen extends StatefulWidget {
   final String videoUrl;
+  final String thumbnailUrl;
 
-  const AiVideoPlaybackScreen({Key? key, required this.videoUrl}) : super(key: key);
+  const AiVideoPlaybackScreen({
+    Key? key, 
+    required this.videoUrl,
+    required this.thumbnailUrl,
+  }) : super(key: key);
 
   @override
   _AiVideoPlaybackScreenState createState() => _AiVideoPlaybackScreenState();
@@ -54,7 +59,10 @@ class _AiVideoPlaybackScreenState extends State<AiVideoPlaybackScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => AddTitleScreen(videoUrl: widget.videoUrl),
+                    builder: (_) => AddTitleScreen(
+                      videoUrl: widget.videoUrl,
+                      thumbnailUrl: widget.thumbnailUrl,
+                    ),
                   ),
                 );
               },

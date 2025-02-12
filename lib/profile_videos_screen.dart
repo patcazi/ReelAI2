@@ -70,7 +70,10 @@ class _ProfileVideosScreenState extends State<ProfileVideosScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => AiVideoPlaybackScreen(videoUrl: videoUrl),
+                            builder: (_) => AiVideoPlaybackScreen(
+                              videoUrl: videoUrl,
+                              thumbnailUrl: thumbnailUrl ?? '',
+                            ),
                           ),
                         );
                       } : null,

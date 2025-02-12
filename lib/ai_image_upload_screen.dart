@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import 'profile_videos_screen.dart';
+import 'ai_video_playback_screen.dart';
 
 class AiImageUploadScreen extends StatefulWidget {
   const AiImageUploadScreen({super.key});
@@ -101,7 +102,12 @@ class _AiImageUploadScreenState extends State<AiImageUploadScreen> {
           // Navigate to ProfileVideosScreen
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const ProfileVideosScreen()),
+            MaterialPageRoute(
+              builder: (_) => AiVideoPlaybackScreen(
+                videoUrl: ephemeralVideoUrl,
+                thumbnailUrl: _uploadedImageUrl!,
+              ),
+            ),
           );
         }
       } else {

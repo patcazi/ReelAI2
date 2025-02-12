@@ -4,8 +4,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class AddTitleScreen extends StatefulWidget {
   final String videoUrl;
+  final String thumbnailUrl;
 
-  const AddTitleScreen({Key? key, required this.videoUrl}) : super(key: key);
+  const AddTitleScreen({
+    Key? key,
+    required this.videoUrl,
+    required this.thumbnailUrl,
+  }) : super(key: key);
 
   @override
   _AddTitleScreenState createState() => _AddTitleScreenState();
@@ -48,6 +53,7 @@ class _AddTitleScreenState extends State<AddTitleScreen> {
                     await FirebaseFirestore.instance.collection('videos').add({
                       'title': _titleController.text,
                       'videoUrl': widget.videoUrl,
+                      'thumbnailUrl': widget.thumbnailUrl,
                       'userId': FirebaseAuth.instance.currentUser!.uid,
                       'timestamp': DateTime.now().millisecondsSinceEpoch,
                     });
