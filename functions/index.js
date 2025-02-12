@@ -1,5 +1,6 @@
 const logger = require("firebase-functions/logger");
 const {TwelveLabs} = require("twelvelabs-js");
+const RunwayML = require("@runwayml/sdk").default;
 const admin = require("firebase-admin");
 const axios = require("axios");
 const fs = require("fs");
@@ -113,6 +114,57 @@ any labels).
         });
       } catch (error) {
         logger.error("Error in generateTitleHashtags", {
+          message: error.message,
+          stack: error.stack,
+        });
+        return res.status(500).json({error: error.toString()});
+      }
+    },
+);
+
+exports.generateRunwayVideo = onRequest(
+    {timeoutSeconds: 540},
+    async (req, res) => {
+      try {
+        const runwayApiKey = process.env.RUNWAYML_API_SECRET;
+        const client = new RunwayML({apiKey: runwayApiKey});
+
+        const {imageUrl} = req.body;
+        if (!imageUrl) {
+          return res.status(400).json({error: "imageUrl is required"});
+        }
+
+        logger.info("Creating image-to-video task...", {imageUrl});
+        const createResp = await client.imageToVideo.create({
+          model: "gen3a_turbo",
+          promptImage: imageUrl,
+          promptText: "Generate a short video",
+          ratio: "1280:768",
+          duration: 5,
+          seed: Math.floor(Math.random() * 4294967295),
+          watermark: false,
+        });
+
+        const taskId = createResp.id;
+        logger.info(`Task created with ID: ${taskId}`);
+
+        for (let i = 0; i < 12; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          const taskStatus = await client.tasks.retrieve(taskId);
+          logger.info(`Task status: ${taskStatus.status}`);
+
+          if (taskStatus.status === "SUCCEEDED") {
+            return res.status(200).json({
+              success: true,
+              videoUrl: taskStatus.output[0],
+            });
+          } else if (taskStatus.status === "FAILED") {
+            throw new Error("Generation failed");
+          }
+        }
+        throw new Error("Timed out waiting for generation");
+      } catch (error) {
+        logger.error("Error in generateRunwayVideo", {
           message: error.message,
           stack: error.stack,
         });

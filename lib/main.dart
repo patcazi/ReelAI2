@@ -9,6 +9,7 @@ import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'dart:io';
 import 'generate_title_screen.dart';
+import 'ai_image_upload_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -331,9 +332,12 @@ class _LandingPageState extends State<LandingPage> {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        // TODO: Navigate to direct messages screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AiImageUploadScreen()),
+                        );
                       },
-                      child: const Text('Direct Messages'),
+                      child: const Text('Generate AI Video'),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
@@ -652,125 +656,141 @@ class _ProfilePageState extends State<ProfilePage> {
                     );
                   }
 
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(8),
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                    ),
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      final video = snapshot.data!.docs[index];
-                      final data = video.data() as Map<String, dynamic>;
-                      final title = data['title'] ?? 'Untitled';
-                      final timestamp = data['timestamp'] as int;
-                      return Stack(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              final docs = snapshot.data!.docs;
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ScrollingVideosScreen(
-                                    videos: docs,
-                                    initialIndex: index,
-                                  ),
+                  return Column(
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ProfileVideosScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text('View AI Videos'),
+                      ),
+                      const SizedBox(height: 20),
+                      GridView.builder(
+                        padding: const EdgeInsets.all(8),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                        itemCount: snapshot.data!.docs.length,
+                        itemBuilder: (context, index) {
+                          final video = snapshot.data!.docs[index];
+                          final data = video.data() as Map<String, dynamic>;
+                          final title = data['title'] ?? 'Untitled';
+                          final timestamp = data['timestamp'] as int;
+                          return Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  final docs = snapshot.data!.docs;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ScrollingVideosScreen(
+                                        videos: docs,
+                                        initialIndex: index,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          data['thumbnailUrl'],
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(4.0),
+                                      child: Text(
+                                        title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              );
-                            },
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(
-                                      data['thumbnailUrl'],
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    final shouldDelete = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Delete Video'),
+                                        content: const Text('Are you sure you want to delete this video?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, true),
+                                            child: const Text('Delete'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (shouldDelete == true && mounted) {
+                                      try {
+                                        // Delete from Storage
+                                        await FirebaseStorage.instance
+                                            .ref('videos/$userId/$timestamp.mp4')
+                                            .delete();
+                                        await FirebaseStorage.instance
+                                            .ref('thumbnails/$userId/$timestamp.png')
+                                            .delete();
+                                        
+                                        // Delete from Firestore
+                                        await FirebaseFirestore.instance
+                                            .collection('videos')
+                                            .doc(video.id)
+                                            .delete();
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Error deleting video: $e')),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Icon(
+                                      Icons.delete,
+                                      color: Colors.white,
+                                      size: 20,
                                     ),
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(4.0),
-                                  child: Text(
-                                    title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: GestureDetector(
-                              onTap: () async {
-                                final shouldDelete = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Delete Video'),
-                                    content: const Text('Are you sure you want to delete this video?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, true),
-                                        child: const Text('Delete'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-
-                                if (shouldDelete == true && mounted) {
-                                  try {
-                                    // Delete from Storage
-                                    await FirebaseStorage.instance
-                                        .ref('videos/$userId/$timestamp.mp4')
-                                        .delete();
-                                    await FirebaseStorage.instance
-                                        .ref('thumbnails/$userId/$timestamp.png')
-                                        .delete();
-                                    
-                                    // Delete from Firestore
-                                    await FirebaseFirestore.instance
-                                        .collection('videos')
-                                        .doc(video.id)
-                                        .delete();
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error deleting video: $e')),
-                                      );
-                                    }
-                                  }
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Icon(
-                                  Icons.delete,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
                               ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   );
                 },
               ),
@@ -1304,6 +1324,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ProfileVideosScreen extends StatefulWidget {
+  const ProfileVideosScreen({super.key});
+
+  @override
+  _ProfileVideosScreenState createState() => _ProfileVideosScreenState();
+}
+
+class _ProfileVideosScreenState extends State<ProfileVideosScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('AI Videos'),
+      ),
+      body: const Center(
+        child: Text('This screen is under development'),
       ),
     );
   }
