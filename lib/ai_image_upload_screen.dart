@@ -202,12 +202,12 @@ class _AiImageUploadScreenState extends State<AiImageUploadScreen> {
                       fit: BoxFit.cover,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Selected image: ${_pickedImagePath!.split('/').last}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
+                  // const SizedBox(height: 10),
+                  // Text(
+                  //   'Selected image: ${_pickedImagePath!.split('/').last}',
+                  //   style: Theme.of(context).textTheme.bodyMedium,
+                  //   textAlign: TextAlign.center,
+                  // ),
                 ],
                 if (_isUploading) ...[
                   const SizedBox(height: 20),
@@ -217,11 +217,11 @@ class _AiImageUploadScreenState extends State<AiImageUploadScreen> {
                 ],
                 if (_uploadedImageUrl != null) ...[
                   const SizedBox(height: 20),
-                  Text(
-                    'Public URL: $_uploadedImageUrl',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
+                  // Text(
+                  //   'Public URL: $_uploadedImageUrl',
+                  //   style: Theme.of(context).textTheme.bodyMedium,
+                  //   textAlign: TextAlign.center,
+                  // ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _isGenerating ? null : _generateVideo,
