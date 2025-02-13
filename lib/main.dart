@@ -337,7 +337,7 @@ class _LandingPageState extends State<LandingPage> {
                           MaterialPageRoute(builder: (context) => const AiImageUploadScreen()),
                         );
                       },
-                      child: const Text('Generate AI Video'),
+                      child: const Text('AI Videos'),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(

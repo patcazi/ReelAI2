@@ -185,7 +185,7 @@ class _AiImageUploadScreenState extends State<AiImageUploadScreen> {
               children: [
                 ElevatedButton(
                   onPressed: _pickImage,
-                  child: const Text('Pick Image'),
+                  child: const Text('Generate Video'),
                 ),
                 const SizedBox(height: 10),
                 ElevatedButton(
