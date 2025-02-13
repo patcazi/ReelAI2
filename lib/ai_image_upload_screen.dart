@@ -17,6 +17,7 @@ class AiImageUploadScreen extends StatefulWidget {
 }
 
 class _AiImageUploadScreenState extends State<AiImageUploadScreen> {
+  final TextEditingController _promptController = TextEditingController();
   String? _pickedImagePath;
   String? _uploadedImageUrl;
   String? _runwayVideoUrl;
@@ -74,7 +75,10 @@ class _AiImageUploadScreenState extends State<AiImageUploadScreen> {
       final response = await http.post(
         Uri.parse('https://us-central1-reel-ai-4.cloudfunctions.net/generateRunwayVideo'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'imageUrl': _uploadedImageUrl}),
+        body: jsonEncode({
+          'imageUrl': _uploadedImageUrl,
+          'promptText': _promptController.text.trim(),
+        }),
       );
 
       debugPrint('Raw response body: ${response.body}');
@@ -222,6 +226,13 @@ class _AiImageUploadScreenState extends State<AiImageUploadScreen> {
                   //   style: Theme.of(context).textTheme.bodyMedium,
                   //   textAlign: TextAlign.center,
                   // ),
+                  TextField(
+                    controller: _promptController,
+                    decoration: const InputDecoration(
+                      labelText: 'Describe your dream video…',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _isGenerating ? null : _generateVideo,

@@ -129,18 +129,22 @@ exports.generateRunwayVideo = onRequest(
         const runwayApiKey = process.env.RUNWAYML_API_SECRET;
         const client = new RunwayML({apiKey: runwayApiKey});
 
-        const {imageUrl} = req.body;
+        const {imageUrl, promptText} = req.body;
         if (!imageUrl) {
           return res.status(400).json({error: "imageUrl is required"});
         }
 
-        logger.info("Creating image-to-video task...", {imageUrl});
+        const text = promptText || "Generate a short video"; // fallback
+        logger.info(
+            "Creating image-to-video task...",
+            {imageUrl, promptText: text},
+        );
         const createResp = await client.imageToVideo.create({
           model: "gen3a_turbo",
           promptImage: imageUrl,
-          promptText: "Generate a short video",
+          promptText: text,
+          duration: 10,
           ratio: "1280:768",
-          duration: 5,
           seed: Math.floor(Math.random() * 4294967295),
           watermark: false,
         });
